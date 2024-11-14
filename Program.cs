@@ -56,6 +56,7 @@ class Program
       ResponseBuilder rb = new(ResponseCode.OK);
       string fileName = (request.Uri == null || request.Uri.Equals("/")) ? "/index.html" : request.Uri;
       string relativePath = $"{htdocs}{fileName}";
+      if(relativePath.Contains("..")) relativePath = "";
       Console.WriteLine($"rel path: {relativePath}");
       await rb.SendFile(client, relativePath);
     }
