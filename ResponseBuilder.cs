@@ -7,7 +7,8 @@ namespace http_webserver;
 enum ResponseCode
 {
     OK = 200,
-    NOT_FOUND = 404
+    NOT_FOUND = 404,
+    SERVER_ERROR = 500
 }
 
 class ResponseBuilder
@@ -32,6 +33,12 @@ class ResponseBuilder
         return sb.ToString();
     }
 
+    async Task SendStatusCode(Socket client, ResponseCode responseCode)
+    {
+        await client.SendAsync(Encoding.UTF8.GetBytes($"HTTP/1.1 {(int) responseCode}\r\n\r\n"));
+        Console.WriteLine($"sent status code: {(int) responseCode}");
+    }
+
     public void AddHeader(string key, string value)
     {
         _headers.Add(new(key, value));
@@ -54,11 +61,12 @@ class ResponseBuilder
         catch (FileNotFoundException)
         {
             Console.WriteLine("file not found");
+            await SendStatusCode(socket, ResponseCode.NOT_FOUND);
         }
         catch(Exception e)
         {
             Console.WriteLine($"could not send file: {e.Message}");
-            // TODO handle response
+            await SendStatusCode(socket, ResponseCode.SERVER_ERROR);
         }
     }
 }

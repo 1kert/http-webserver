@@ -53,20 +53,17 @@ class Program
     RequestModel? request = await GetRequest(client);
     if(request?.Method == RequestMethod.GET)
     {
-      ResponseBuilder rb = new(ResponseCode.OK);
+      ResponseBuilder rb = new(ResponseCode.OK); // TODO add these to requestmodel
       string fileName = (request.Uri == null || request.Uri.Equals("/")) ? "/index.html" : request.Uri;
       string relativePath = $"{htdocs}{fileName}";
-      if(relativePath.Contains("..")) relativePath = "";
+      if(relativePath.Contains(".."))
+      {
+        relativePath = "";
+        Console.WriteLine("move up in path");
+      }
       Console.WriteLine($"rel path: {relativePath}");
       await rb.SendFile(client, relativePath);
     }
-  }
-
-  static async Task SendNotFound(Socket client)
-  {
-    string message = "HTTP/1.1 404\r\n\r\n";
-    await client.SendAsync(Encoding.UTF8.GetBytes(message));
-    Console.WriteLine($"sent 404");
   }
 
   static async Task Main()
