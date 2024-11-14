@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.IO.Enumeration;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -33,7 +34,7 @@ class Program
       for (int i = 1; i < lines.Length; i++)
       {
         if (lines[i].Equals("")) break;
-        if(!requestModel.AddHeader(lines[i])) Console.WriteLine("error adding header");
+        if (!requestModel.AddHeader(lines[i])) Console.WriteLine("error adding header");
       }
 
       Console.WriteLine($"uri: {requestModel.Uri}");
@@ -50,32 +51,51 @@ class Program
   static async Task ServeRequest(Socket client)
   {
     RequestModel? request = await GetRequest(client);
-    if(request?.Method == RequestMethod.GET && request.Uri == "/")
+    if(request?.Method == RequestMethod.GET)
     {
-      await SendIndexPage(client);
+      await SendFile(client, request);
     }
   }
 
-  static async Task SendIndexPage(Socket client)
+  static async Task<bool> SendFile(Socket client, RequestModel request)
   {
+    string? uri = request.Uri;
+    if (uri == null) return false;
+    if(uri.Equals("/")) uri = "/index.html";
+    string filename = $"{htdocs}/{uri}";
+
+    if (!File.Exists(filename))
+    {
+      await SendNotFound(client);
+      return false;
+    }
+
     try
     {
-      string fileName = $"{htdocs}/index.html";
-      using FileStream fs = File.OpenRead(fileName);
+      using FileStream fs = File.OpenRead(filename);
       long fileLength = fs.Length;
       fs.Close();
-      Console.WriteLine($"sending a file with a length of {fileLength}");
+      Console.WriteLine($"sending {uri} ({fileLength})");
       string headers = $"HTTP/1.1 200\r\nContent-Type: text/html; charset: UTF-8;\r\nContent-Length: {fileLength}\r\n\r\n";
       await client.SendAsync(Encoding.UTF8.GetBytes(headers));
-      await client.SendFileAsync($"{htdocs}/index.html");
+      await client.SendFileAsync(filename);
+      return true;
     }
     catch (Exception e)
     {
-      Console.WriteLine(e.Message);
+      Console.WriteLine($"error sending message: {e.Message}");
     }
+
+    return false;
   }
 
-  static async Task Main(string[] args)
+  static async Task SendNotFound(Socket client)
+  {
+    string message = "HTTP/1.1 404\r\n\r\n";
+    await client.SendAsync(Encoding.UTF8.GetBytes(message));
+  }
+
+  static async Task Main()
   {
     int port = 8001;
     var ipEndPoint = IPEndPoint.Parse($"127.0.0.1:{port}");
