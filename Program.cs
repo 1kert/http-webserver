@@ -53,46 +53,19 @@ class Program
     RequestModel? request = await GetRequest(client);
     if(request?.Method == RequestMethod.GET)
     {
-      await SendFile(client, request);
+      ResponseBuilder rb = new(ResponseCode.OK);
+      string fileName = (request.Uri == null || request.Uri.Equals("/")) ? "/index.html" : request.Uri;
+      string relativePath = $"{htdocs}{fileName}";
+      Console.WriteLine($"rel path: {relativePath}");
+      await rb.SendFile(client, relativePath);
     }
-  }
-
-  static async Task<bool> SendFile(Socket client, RequestModel request)
-  {
-    string? uri = request.Uri;
-    if (uri == null) return false;
-    if(uri.Equals("/")) uri = "/index.html";
-    string filename = $"{htdocs}/{uri}";
-
-    if (!File.Exists(filename))
-    {
-      await SendNotFound(client);
-      return false;
-    }
-
-    try
-    {
-      using FileStream fs = File.OpenRead(filename);
-      long fileLength = fs.Length;
-      fs.Close();
-      Console.WriteLine($"sending {uri} ({fileLength})");
-      string headers = $"HTTP/1.1 200\r\nContent-Type: text/html; charset: UTF-8;\r\nContent-Length: {fileLength}\r\n\r\n";
-      await client.SendAsync(Encoding.UTF8.GetBytes(headers));
-      await client.SendFileAsync(filename);
-      return true;
-    }
-    catch (Exception e)
-    {
-      Console.WriteLine($"error sending message: {e.Message}");
-    }
-
-    return false;
   }
 
   static async Task SendNotFound(Socket client)
   {
     string message = "HTTP/1.1 404\r\n\r\n";
     await client.SendAsync(Encoding.UTF8.GetBytes(message));
+    Console.WriteLine($"sent 404");
   }
 
   static async Task Main()
