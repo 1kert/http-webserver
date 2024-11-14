@@ -5,7 +5,8 @@ class ContentType
     private static readonly Dictionary<string, string> _dict = new()
     {
         { "css", "text/css" },
-        { "html", "text/html" }
+        { "html", "text/html" },
+        { "js", "text/javascript" }
     };
 
     public static string? GetContentType(string filePath)
